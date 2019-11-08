@@ -15,17 +15,12 @@ router.post(
   [
     check('email')
       .isEmail()
-      .withMessage('Please enter a valid email.'),
-    // .custom((value, { req }) => {
-    //   return User.findOne({ email: value }).then(userDoc => {
-    //     if (!userDoc) {
-    //       return Promise.reject('There is no account associated with this email address.');
-    //     }
-    //   });
-    // }),
+      .withMessage('Please enter a valid email.')
+      .normalizeEmail(),
     body('password', 'Please enter a password with only numbers and letters and that is at least 5 characters')
       .isLength({ min: 5 })
       .isAlphanumeric()
+      .trim()
   ],
   authController.postLogin
 );
@@ -46,16 +41,20 @@ router.post(
             return Promise.reject('Account already associated with email, please use a different one.');
           }
         });
-      }),
+      })
+      .normalizeEmail(),
     body('password', 'Please enter a password with only numbers and letters and that is at least 5 characters')
       .isLength({ min: 5 })
-      .isAlphanumeric(),
-    body('confirmPassword').custom((value, { req }) => {
-      if (value !== req.body.password) {
-        throw new Error('Passwords have to match!');
-      }
-      return true;
-    })
+      .isAlphanumeric()
+      .trim(),
+    body('confirmPassword')
+      .trim()
+      .custom((value, { req }) => {
+        if (value !== req.body.password) {
+          throw new Error('Passwords have to match!');
+        }
+        return true;
+      })
   ],
   authController.postSignup
 );
