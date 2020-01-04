@@ -58,37 +58,45 @@ class App extends Component {
 
   loginHandler = (event, authData) => {
     event.preventDefault();
+    const graphqlQuery = {
+      query: `
+        {
+          login(email: "${authData.email}", password: "${authData.password}") {
+            token
+            userId
+          }
+        }
+      `
+    };
     this.setState({ authLoading: true });
-    fetch('http://localhost:8080/auth/login', {
+    fetch('http://localhost:8080/graphql', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        email: authData.email,
-        password: authData.password
-      })
+      body: JSON.stringify(graphqlQuery)
     })
       .then(res => {
-        if (res.status === 422) {
-          throw new Error('Validation failed.');
-        }
-        if (res.status !== 200 && res.status !== 201) {
-          console.log('Error!');
-          throw new Error('Could not authenticate you!');
-        }
         return res.json();
       })
       .then(resData => {
+        if (resData.errors && resData.errors[0].status === 422) {
+          throw new Error(
+            "Validation failed. Make sure the email address isn't used yet!"
+          );
+        }
+        if (resData.errors) {
+          throw new Error('User login failed!');
+        }
         console.log(resData);
         this.setState({
           isAuth: true,
-          token: resData.token,
+          token: resData.data.login.token,
           authLoading: false,
-          userId: resData.userId
+          userId: resData.data.login.userId
         });
-        localStorage.setItem('token', resData.token);
-        localStorage.setItem('userId', resData.userId);
+        localStorage.setItem('token', resData.data.login.token);
+        localStorage.setItem('userId', resData.data.login.userId);
         const remainingMilliseconds = 60 * 60 * 1000;
         const expiryDate = new Date(
           new Date().getTime() + remainingMilliseconds
@@ -111,12 +119,17 @@ class App extends Component {
     this.setState({ authLoading: true });
     const graphqlQuery = {
       query: `
-      mutation {
-        createUser(userInput: {email: "${authData.signupForm.email.value}", name: "${authData.signupForm.name.value}", password: "${authData.signupForm.password.value}"}) {
-          _id
-          email
+        mutation {
+          createUser(userInput: {email: "${
+            authData.signupForm.email.value
+          }", name:"${authData.signupForm.name.value}", password:"${
+        authData.signupForm.password.value
+      }"}) {
+            _id
+            email
+          }
         }
-      }`
+      `
     };
     fetch('http://localhost:8080/graphql', {
       method: 'POST',
@@ -131,7 +144,7 @@ class App extends Component {
       .then(resData => {
         if (resData.errors && resData.errors[0].status === 422) {
           throw new Error(
-            "Valdation failed. Make sure the email address isn't used yet!"
+            "Validation failed. Make sure the email address isn't used yet!"
           );
         }
         if (resData.errors) {
@@ -165,7 +178,7 @@ class App extends Component {
     let routes = (
       <Switch>
         <Route
-          path='/'
+          path="/"
           exact
           render={props => (
             <LoginPage
@@ -176,7 +189,7 @@ class App extends Component {
           )}
         />
         <Route
-          path='/signup'
+          path="/signup"
           exact
           render={props => (
             <SignupPage
@@ -186,21 +199,21 @@ class App extends Component {
             />
           )}
         />
-        <Redirect to='/' />
+        <Redirect to="/" />
       </Switch>
     );
     if (this.state.isAuth) {
       routes = (
         <Switch>
           <Route
-            path='/'
+            path="/"
             exact
             render={props => (
               <FeedPage userId={this.state.userId} token={this.state.token} />
             )}
           />
           <Route
-            path='/:postId'
+            path="/:postId"
             render={props => (
               <SinglePostPage
                 {...props}
@@ -209,7 +222,7 @@ class App extends Component {
               />
             )}
           />
-          <Redirect to='/' />
+          <Redirect to="/" />
         </Switch>
       );
     }
@@ -246,3 +259,4 @@ class App extends Component {
 }
 
 export default withRouter(App);
+
