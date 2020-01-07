@@ -57,7 +57,7 @@ class Feed extends Component {
 		const graphqlQuery = {
 			query: `
         {
-          posts{
+          posts(page: ${page}){
             posts {
               _id
               title
@@ -95,7 +95,7 @@ class Feed extends Component {
 							imagePath: post.imageUrl
 						};
 					}),
-					totalPosts: resData.data.posts.posts.totalPosts,
+					totalPosts: resData.data.posts.totalPosts,
 					postsLoading: false
 				});
 			})
@@ -178,9 +178,6 @@ class Feed extends Component {
 			}
 		})
 			.then(res => {
-				if (res.status !== 200 && res.status !== 201) {
-					throw new Error('Creating or editing a post failed!');
-				}
 				return res.json();
 			})
 			.then(resData => {
@@ -201,20 +198,26 @@ class Feed extends Component {
 					createdAt: resData.data.createPost.createdAt
 				};
 				this.setState(prevState => {
-					let updatedPosts = [...prevState.posts];
+          let updatedPosts = [...prevState.posts];
+          let updatedTotalPosts = prevState.totalPosts;
 					if (prevState.editPost) {
 						const postIndex = prevState.posts.findIndex(
 							p => p._id === prevState.editPost._id
 						);
 						updatedPosts[postIndex] = post;
 					} else {
+            updatedTotalPosts++;
+						if (prevState.posts.length >= 2) {
+							updatedPosts.pop();
+						}
 						updatedPosts.unshift(post);
 					}
 					return {
 						posts: updatedPosts,
 						isEditing: false,
 						editPost: null,
-						editLoading: false
+            editLoading: false,
+            totalPosts: updatedTotalPosts
 					};
 				});
 			})

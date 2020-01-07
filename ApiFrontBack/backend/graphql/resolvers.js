@@ -12,11 +12,6 @@ module.exports = {
 		if (!validator.isEmail(userInput.email)) {
 			errors.push({ message: 'Email is invalid.' });
 		}
-		const existingUser = await User.findOne({ email: userInput.email });
-		if (existingUser) {
-			const error = new Error('User exists already!');
-			throw error;
-		}
 		if (
 			validator.isEmpty(userInput.password) ||
 			!validator.isLength(userInput.password, { min: 5 })
@@ -27,6 +22,11 @@ module.exports = {
 			const error = new Error('Invalid input.');
 			error.data = errors;
 			error.code = 422;
+			throw error;
+    }		
+    const existingUser = await User.findOne({ email: userInput.email });
+		if (existingUser) {
+			const error = new Error('User exists already!');
 			throw error;
 		}
 		const hashedPw = await bcrypt.hash(userInput.password, 12);
@@ -109,15 +109,21 @@ module.exports = {
 			updatedAt: createdPost.updatedAt.toISOString()
 		};
 	},
-	posts: async function(args, req) {
+	posts: async function({ page }, req) {
 		if (!req.isAuth) {
 			const error = new Error('Not authenticated!');
 			error.code = 401;
 			throw error;
-		}
+    }
+    if (!page) {
+      page = 1;
+    }
+    const perPage = 2;
 		const totalPosts = await Post.find().countDocuments();
 		const posts = await Post.find()
-			.sort({ createdAt: -1 })
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * perPage)
+      .limit(perPage)
 			.populate('creator');
 		return {
 			posts: posts.map(p => {
