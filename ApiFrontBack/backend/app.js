@@ -1,6 +1,5 @@
 require('dotenv').config();
 const path = require('path');
-const fs = require('fs');
 const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
@@ -11,6 +10,7 @@ const graphqlHttp = require('express-graphql');
 const graphqlSchema = require('./graphql/schema');
 const graphqlResolver = require('./graphql/resolvers');
 const auth = require('./middleware/auth');
+const { clearImage } = require('./util/file');
 
 const MONGODB_URI =
 	'mongodb+srv://Mataja:' +
@@ -73,7 +73,7 @@ app.put('/post-image', (req, res, next) => {
 	if (req.body.oldPath) {
 		clearImage(req.body.oldPath);
 	}
-	const newImageUrl =  req.file.path.replace('\\', '/');
+	const newImageUrl = req.file.path.replace('\\', '/');
 	return res
 		.status(201)
 		.json({ message: 'File Stored', filePath: newImageUrl });
@@ -114,8 +114,3 @@ mongoose
 	.catch(err => {
 		console.log(err);
 	});
-
-const clearImage = filePath => {
-	filePath = path.join(__dirname, '..', filePath);
-	fs.unlink(filePath, err => console.log(err));
-};
